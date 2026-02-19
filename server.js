@@ -19,7 +19,11 @@ const protect = require("./middleware/authMiddleware.js");
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: "https://vercel-frontend-silk-alpha.vercel.app",
+  credentials: true
+}));
+
 app.use(express.json());
 
 // ROUTES

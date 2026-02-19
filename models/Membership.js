@@ -1,18 +1,39 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const membershipSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    name: { type: String, required: true },
-    email: { type: String, required: true },
-    phone: { type: String },
-    address: { type: String },
-    plan: { type: String, default: "standard" },
-    startDate: { type: Date },
-    notes: { type: String },
-    status: { type: String, default: "pending" },
+    name: {
+      type: String,
+      required: true,
+    },
+    email: {
+      type: String,
+      required: true,
+    },
+    phone: {
+      type: String,
+    },
+    address: {
+      type: String,
+    },
+    plan: {
+      type: String,
+      enum: ["basic", "standard", "premium"],
+      default: "standard",
+    },
+    startDate: {
+      type: String,
+    },
+    notes: {
+      type: String,
+    },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Membership", membershipSchema);
+export default mongoose.model("Membership", membershipSchema);
