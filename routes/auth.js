@@ -6,16 +6,17 @@ const jwt = require("jsonwebtoken");
 
 /* ================= REGISTER ================= */
 router.post("/register", async (req, res) => {
-  console.log("REGISTER BODY:", req.body); // debug
-
   try {
     const { name, email, password } = req.body;
 
-    if (!name || !email || !password) {
+    const trimmedName = name?.trim();
+    const normalizedEmail = email?.trim().toLowerCase();
+
+    if (!trimmedName || !normalizedEmail || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
@@ -23,8 +24,8 @@ router.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new User({
-      name,
-      email,
+      name: trimmedName,
+      email: normalizedEmail,
       password: hashedPassword,
     });
 
@@ -36,9 +37,20 @@ router.post("/register", async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    res.status(201).json({ message: "User registered successfully", token });
-
+    res.status(201).json({
+      message: "User registered successfully",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+    });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
     console.error("REGISTER ERROR:", error);
     res.status(500).json({ message: "Server error" });
   }
@@ -48,25 +60,22 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
+    const normalizedEmail = email?.trim().toLowerCase();
 
-    // 1️⃣ Validate
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // 2️⃣ Find user
-    const user = await User.findOne({ email });
-    if (!user) {
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user || !user.password) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    // 3️⃣ Compare password (MOST IMPORTANT)
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    // 4️⃣ Generate token
     const token = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET,
@@ -79,10 +88,9 @@ router.post("/login", async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email
-      }
+        email: user.email,
+      },
     });
-
   } catch (error) {
     console.error("LOGIN ERROR:", error);
     res.status(500).json({ message: "Server error" });
